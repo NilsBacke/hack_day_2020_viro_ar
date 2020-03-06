@@ -2,20 +2,19 @@
 
 import React, { Component } from 'react';
 
-import {StyleSheet, Platform} from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 
 import {
   ViroARScene,
   ViroText,
   ViroConstants,
-  ViroARPlane,
-  ViroBox,
-  ViroAmbientLight,
-  ViroDirectionalLight
+  ViroFlexView,
+  ViroImage,
+  ViroSpinner
 } from 'react-viro';
 
 // const CURRENT_LOCATION = '34.434480,-119.863910'
-const CURRENT_LOCATION = '34.434561,-119.863801'
+const CURRENT_LOCATION = '34.434043,-119.863005'
 
 export default class HelloWorldSceneAR extends Component {
 
@@ -46,7 +45,7 @@ export default class HelloWorldSceneAR extends Component {
   }
 
   getPropertyCoordinates() {
-    fetch(`https://4861dddf.ngrok.io/dashboard/get_ar_attrs?lat_long=${CURRENT_LOCATION}`)
+    fetch(`https://73364d2a.ngrok.io/dashboard/get_ar_attrs?lat_long=${CURRENT_LOCATION}`)
       .then((response) => {
         console.log(response)
         return response.json()
@@ -62,6 +61,26 @@ export default class HelloWorldSceneAR extends Component {
       .catch((error) => {
         console.error(error);
       });
+
+    // this.setState({
+    //   properties: [
+    //     {
+    //       addr: { address1: "TEST ADDRESS" },
+    //       t_lat: 34.434850,
+    //       t_long: -119.863801,
+    //     },
+    //     {
+    //       addr: { address1: "TEST ADDRESS" },
+    //       t_lat: 34.434585,
+    //       t_long: -119.863801,
+    //     },
+    //     {
+    //       addr: { address1: "TEST ADDRESS" },
+    //       t_lat: 34.434585,
+    //       t_long: -119.863801,
+    //     },
+    //   ]
+    // })
   }
 
   onTrackingUpdated = (state, reason) => {
@@ -79,9 +98,9 @@ export default class HelloWorldSceneAR extends Component {
 
   onARInitialized() {
     if (this.state.properties[0]) {
-      var point1 = this._transformPointToAR(this.state.properties[0].t_lat, this.state.properties[0].t_long);
-      var point2 = this._transformPointToAR(this.state.properties[1].t_lat, this.state.properties[1].t_long);
-      var point3 = this._transformPointToAR(this.state.properties[2].t_lat, this.state.properties[2].t_long);
+      var point1 = this._transformPointToAR(this.state.properties[0].addr.latitude, this.state.properties[0].addr.longitude);
+      var point2 = this._transformPointToAR(this.state.properties[1].addr.latitude, this.state.properties[1].addr.longitude);
+      var point3 = this._transformPointToAR(this.state.properties[2].addr.latitude, this.state.properties[2].addr.longitude);
       console.log("obj north final x:" + point1.x + "final z:" + point1.z);
       console.log("obj east point x" + point2.x + "final z" + point2.z);
       console.log("obj west point x" + point3.x + "final z" + point3.z);
@@ -93,8 +112,6 @@ export default class HelloWorldSceneAR extends Component {
         point3X: point3.x,
         point3Z: point3.z,
         text : "AR Init called."
-      }, () => {
-        console.log(this.state)
       });
     }
     
@@ -106,7 +123,7 @@ export default class HelloWorldSceneAR extends Component {
    var sm_a = 6378137.0
    var xmeters  = sm_a * lon_rad
    var ymeters = sm_a * Math.log((Math.sin(lat_rad) + 1) / Math.cos(lat_rad))
-   return ({x:xmeters, y:ymeters});
+   return ({ x:xmeters, y:ymeters });
   }
 
   _transformPointToAR(lat, long) {
@@ -120,14 +137,8 @@ export default class HelloWorldSceneAR extends Component {
       let degree = 90; // not using real compass yet.
       let angleRadian = (degree * Math.PI) / 180;
 
-      console.log('Using degree => ', degree);
-      console.log('Angle radian => ', angleRadian);
-
       let newObjX = objDeltaX * Math.cos(angleRadian) - objDeltaY * Math.sin(angleRadian);
       let newObjY = objDeltaX * Math.sin(angleRadian) + objDeltaY * Math.cos(angleRadian);
-
-      console.log('old delta => ', { x: objDeltaX, z: -objDeltaY });
-      console.log('new delta => ', { x: newObjX, z: -newObjY });
 
       return { x: newObjX, z: -newObjY };
     }
@@ -135,15 +146,35 @@ export default class HelloWorldSceneAR extends Component {
     return { x: objDeltaX, z: -objDeltaY };
   }
 
+  renderPropertyCard(index) {
+    const property = this.state.properties[index];
+    return (<ViroFlexView style={{flexDirection: 'column', backgroundColor: 'white', alignItems: 'flex-start' }} 
+        width={6} height={6}
+        scale={[5, 5, 5]}
+        position={[this.state[`point${index + 1}X`], 0, this.state[`point${index + 1}Z`]]}
+        transformBehaviors={["billboard"]}>
+      <ViroImage source={{ uri: property.photo_url || 'https://ddr.properties/wp-content/uploads/2015/02/placeholder.jpg' }} height={3} width={6} />
+      <ViroFlexView style={{flexDirection: 'column', backgroundColor: 'white', alignItems: 'flex-start', padding: 0.1 }} height={3} width={6}>
+        <ViroText text={`Property: ${property.addr.address1}`} style={styles.helloWorldTextStyle} width={5} />
+        <ViroText text={`Market Rent: ${property.market_rent}`} style={styles.helloWorldTextStyle} width={5} />
+        <ViroText text={`Available on: ${`not soon enough!`}`} style={styles.helloWorldTextStyle} width={5} />
+      </ViroFlexView>
+    </ViroFlexView>)
+  }
+
   render() {
     if (!this.state.properties[0]) {
-      return <ViroARScene dragType='FixedToWorld' onTrackingUpdated={this.onTrackingUpdated} />
+      return <ViroARScene dragType='FixedToWorld' onTrackingUpdated={this.onTrackingUpdated}>
+        <ViroSpinner
+          position={[0, 0, -2]}
+        />
+      </ViroARScene>
     }
     return (
       <ViroARScene dragType='FixedToWorld' onTrackingUpdated={this.onTrackingUpdated}>
-        <ViroText text={this.state.properties[0].addr.address1} scale={[3, 3, 3]} transformBehaviors={["billboard"]} position={[this.state.point1X, 0, this.state.point1Z]} style={styles.helloWorldTextStyle} />
-        <ViroText text={this.state.properties[2].addr.address1} scale={[3, 3, 3]} transformBehaviors={["billboard"]} position={[this.state.point3X, 0, this.state.point3Z]} style={styles.helloWorldTextStyle} />
-        <ViroText text={this.state.properties[1].addr.address1} scale={[3, 3, 3]} transformBehaviors={["billboard"]} position={[this.state.point2X, 0, this.state.point2Z]} style={styles.helloWorldTextStyle} />
+        {this.renderPropertyCard(0)}
+        {this.renderPropertyCard(1)}
+        {this.renderPropertyCard(2)}
       </ViroARScene>
     );
   }
@@ -151,11 +182,10 @@ export default class HelloWorldSceneAR extends Component {
 
 var styles = StyleSheet.create({
   helloWorldTextStyle: {
+    fontSize: 28,
     fontFamily: 'Arial',
-    fontSize: 30,
-    color: '#ffffff',
+    color: '#000000',
     textAlignVertical: 'center',
-    textAlign: 'center',  
   },
 });
 

@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Linking } from 'react-native';
 
 import {
   ViroARScene,
@@ -10,11 +10,12 @@ import {
   ViroConstants,
   ViroFlexView,
   ViroImage,
-  ViroSpinner
+  ViroSpinner,
+  ViroQuad
 } from 'react-viro';
 
-// const CURRENT_LOCATION = '34.434480,-119.863910'
-const CURRENT_LOCATION = '34.434043,-119.863005'
+// const CURRENT_LOCATION = '34.434226,-119.863034' // 50 parking lot
+const CURRENT_LOCATION = '34.434033,-119.863855' // eng square
 
 export default class HelloWorldSceneAR extends Component {
 
@@ -61,26 +62,6 @@ export default class HelloWorldSceneAR extends Component {
       .catch((error) => {
         console.error(error);
       });
-
-    // this.setState({
-    //   properties: [
-    //     {
-    //       addr: { address1: "TEST ADDRESS" },
-    //       t_lat: 34.434850,
-    //       t_long: -119.863801,
-    //     },
-    //     {
-    //       addr: { address1: "TEST ADDRESS" },
-    //       t_lat: 34.434585,
-    //       t_long: -119.863801,
-    //     },
-    //     {
-    //       addr: { address1: "TEST ADDRESS" },
-    //       t_lat: 34.434585,
-    //       t_long: -119.863801,
-    //     },
-    //   ]
-    // })
   }
 
   onTrackingUpdated = (state, reason) => {
@@ -146,19 +127,41 @@ export default class HelloWorldSceneAR extends Component {
     return { x: objDeltaX, z: -objDeltaY };
   }
 
+  navigateTo(index, position, source) {
+    const property = this.state.properties[index];
+    const url = `https://www.google.com/maps/dir/?api=1&travelmode=walking&dir_action=navigate&destination=${property.addr.geocoder_formatted_address}`;
+    Linking.canOpenURL(url).then(supported => {
+      if (!supported) {
+          console.log('Can\'t handle url: ' + url);
+      } else {
+          return Linking.openURL(url);
+      }
+    }).catch(err => console.error('An error occurred', err)); 
+  }
+
   renderPropertyCard(index) {
     const property = this.state.properties[index];
     return (<ViroFlexView style={{flexDirection: 'column', backgroundColor: 'white', alignItems: 'flex-start' }} 
-        width={6} height={6}
+        onClick={(position, source) => this.navigateTo(index, position, source)}
+        width={8} height={6}
         scale={[5, 5, 5]}
         position={[this.state[`point${index + 1}X`], 0, this.state[`point${index + 1}Z`]]}
-        transformBehaviors={["billboard"]}>
-      <ViroImage source={{ uri: property.photo_url || 'https://ddr.properties/wp-content/uploads/2015/02/placeholder.jpg' }} height={3} width={6} />
-      <ViroFlexView style={{flexDirection: 'column', backgroundColor: 'white', alignItems: 'flex-start', padding: 0.1 }} height={3} width={6}>
-        <ViroText text={`Property: ${property.addr.address1}`} style={styles.helloWorldTextStyle} width={5} />
-        <ViroText text={`Market Rent: ${property.market_rent}`} style={styles.helloWorldTextStyle} width={5} />
-        <ViroText text={`Available on: ${`not soon enough!`}`} style={styles.helloWorldTextStyle} width={5} />
+        transformBehaviors={["billboardY"]}>
+      <ViroImage source={{ uri: property.photo_url || 'https://ddr.properties/wp-content/uploads/2015/02/placeholder.jpg' }} height={3} width={8} />
+      <ViroFlexView style={{flexDirection: 'column', backgroundColor: 'white', alignItems: 'flex-start' }} height={2.75} width={8}>
+        <ViroFlexView style={{ flexDirection: 'row', justifyContent: 'flex-start' }} width={8} height={0.75}>
+          <ViroText text={`  ${property.addr.address1}   `} style={{...styles.helloWorldTextStyle, fontWeight: 'bold', fontSize: 34 }}/>
+          <ViroText text={`Go To Listing`} style={{...styles.helloWorldTextStyle, color: 'blue' }}/>
+        </ViroFlexView>
+        <ViroText text={`  $${property.market_rent}/month`} style={styles.helloWorldTextStyle} width={7} />
+        <ViroText text={`  Details: 2 bed 1 bath`} style={styles.helloWorldTextStyle} width={7} />
+        <ViroFlexView style={{ flexDirection: 'row', backgroundColor: '#3267D6' }} height={1.25}>
+          <ViroText text=" " style={styles.helloWorldTextStyle} width={2} />
+          <ViroImage source={require('../man.png')} height={1} width={1} />
+          <ViroText text={` 3 minutes`} style={{...styles.helloWorldTextStyle, color: '#ffffff', fontSize: 40 }} />
+        </ViroFlexView>
       </ViroFlexView>
+      {/* <ViroFlexView style={{ backgroundColor: 'white' }} width={1} height={1} /> */}
     </ViroFlexView>)
   }
 
@@ -182,7 +185,7 @@ export default class HelloWorldSceneAR extends Component {
 
 var styles = StyleSheet.create({
   helloWorldTextStyle: {
-    fontSize: 28,
+    fontSize: 30,
     fontFamily: 'Arial',
     color: '#000000',
     textAlignVertical: 'center',
